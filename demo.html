@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Content Backup and Position Tracking</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Add the new stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Basic styling for the page and elements */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #111827;
+        }
+        .pagebook {
+            border: 2px dashed #9ca3af; /* Dashed border to indicate the fixed boundary */
+            padding: 1.5rem;
+            margin: 1.5rem auto; /* Center the editor */
+            background-color: #ffffff;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            outline: none; /* Removes the default blue outline on focus */
+            
+            /* --- Fixed Height and Width --- */
+            height: 1550px;
+            width: 800px; 
+            overflow-y: hidden; /* Hide scrollbar, overflow is handled programmatically */
+        }
+        .page-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem; /* Space between pages */
+        }
+        .pagebook > div, .pagebook > h2 {
+            border-left: 3px solid transparent;
+            padding: 0.5rem;
+        }
+        /* Removed the blue hover styles that were distracting */
+        #output-container {
+            position: sticky;
+            top: 1.5rem;
+        }
+        /* --- Custom Alert Modal --- */
+        #alert-modal {
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+        }
+        /* Hidden page styling */
+        .page-hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-6">
+
+    <!-- Custom Alert Modal -->
+    <div id="alert-modal" class="fixed top-0 left-1/2 -translate-x-1/2 -translate-y-full w-full max-w-md p-4 bg-red-500 text-white rounded-b-lg shadow-xl z-50 flex items-center justify-between opacity-0">
+        <div class="flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span id="alert-message"></span>
+        </div>
+        <button id="close-alert-btn" class="p-1 rounded-full hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-white">
+             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+    </div>
+
+    <div class="max-w-screen-2xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        <!-- Left Column: The content area -->
+        <div>
+            <div class="flex justify-between items-center mb-4 max-w-[800px] mx-auto">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800 mb-2">Content Editor</h1>
+                    <p class="text-gray-600">Content will automatically flow to the next page.</p>
+                </div>
+                <!-- Button Container -->
+                <div class="flex gap-2">
+                    <!-- Hide/Show Page 2 Button -->
+                    <button id="toggle-page2-btn" class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition duration-300 shadow-md">
+                        Hide Page 2
+                    </button>
+                    <!-- Restore Button -->
+                    <button id="restore-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md">
+                        Restore Content
+                    </button>
+                </div>
+            </div>
+            
+            <!-- This is the target container -->
+            <div class="page-container">
+                <div id="pagenumber1" class="pagebook qoel" contenteditable="true" tabindex="0">
+                    <div class="qoel" ids="2025062210-1" style="user-select: text; cursor: text; position: relative;"><span class="clickable-reference-qnote" contenteditable="false" data-full-path="1. Main Menu/Dashbo.qnote" style="font-size: medium; text-decoration-line: underline; color: blue; cursor: pointer;">Dashbo.qnote</span></div>
+                    <h2 heading_id="heading_1" class="qoel">What to Review and Study?</h2>
+                    <div class="qoel" ids="2025062210-5" style="user-select: text; cursor: text; position: relative;"><br></div>
+                    <div class="qoel" ids="2025062210-6" style="user-select: text; cursor: text; position: relative;"><font style="font-size: 15px;"><b>Explanation of Proposals</b>:</font></div>
+                    <div class="qoel" ids="2025062210-7" style="user-select: text; cursor: text; position: relative;"><font style="font-size: 15px;"><br></font></div>
+                    <div class="qoel" style="user-select: text; cursor: text; position: relative;"><strong>Quantum Dot-Based Photodetectors</strong>: This proposal focuses on leveraging the photoluminescent properties of quantum dots in combination with the high surface area of nanogap electrodes to develop highly sensitive photodetectors. These devices are essential for optical communication systems, where fast response times and high sensitivity are critical. The integration of quantum dots with nanogap electrodes aims to enhance light absorption and charge collection efficiency, making these photodetectors more efficient for future applications (Shibata, 2023; Yeh et al., 2021; Park et al., 2020).</div><div class="qoel" style="user-select: text; cursor: text; position: relative;"><br></div><div class="qoel" style="user-select: text; cursor: text; position: relative;"><strong>Single-Electron Transistors with Enhanced Tunneling Efficiency</strong>: This research aims to optimize the design of single-electron transistors (SETs) using nanogap electrodes to improve tunneling efficiency, a key factor in reducing energy consumption. Enhancing the tunneling rates will enable the development of ultra-low-power electronic devices, which are vital for advancing energy-efficient technologies in modern electronics (Yadav et al., 2022; Lee et al., 2021).</div><div class="qoel" style="user-select: text; cursor: text; position: relative;"><br></div><div class="qoel" style="user-select: text; cursor: text; position: relative;"><strong>Quantum Dot-Based Sensors for Environmental Monitoring</strong>: This proposal seeks to harness the unique electronic properties of quantum dots to create highly sensitive sensors for detecting environmental pollutants. By integrating these quantum dots with nanogap electrodes, the sensors' sensitivity and selectivity will be significantly improved, making them ideal for real-time monitoring of chemical species that affect public health and safety (Drago et al., 2022; Saraiva et al., 2021).</div><div class="qoel" style="user-select: text; cursor: text; position: relative;"><br></div><div class="qoel" style="user-select: text; cursor: text; position: relative;"><strong>Hybrid Quantum Dot and Nanoparticle Systems for Energy Harvesting</strong>: This research aims to explore the potential of combining quantum dots with nanogap electrodes to create advanced systems for energy harvesting. By utilizing the quantum confinement effects in quantum dots, the system can increase the efficiency of solar cells or thermoelectric devices, contributing to sustainable energy solutions for the future (Majidi et al., 2022; Tanamoto, 2024).</div><div class="qoel" style="user-select: text; cursor: text; position: relative;"><br></div><div class="qoel" style="user-select: text; cursor: text; position: relative;"><strong>Development of Quantum Dot-Based Logic Gates</strong>: This proposal investigates the possibility of using quantum dots in quantum dot cellular automata (QCA) to develop high-speed, low-power logic gates. These quantum dot-based logic gates could lead to significant advancements in quantum computing, offering faster and more efficient processing capabilities compared to current technologies (Liza et al., 2022; Sharma et al., 2022; Xu et al., 2020).</div>
+                    <div class="qoel" ids="2025062210-9" style="user-select: text; cursor: text; position: relative;"><br></div>
+                </div>
+                <div id="pagenumber2" class="pagebook qoel" contenteditable="true" tabindex="0"></div>
+            </div>
+        </div>
+
+        <!-- Right Column: The live JSON output -->
+        <div id="output-container">
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Live JSON Backup</h2>
+            <p class="text-gray-600 mb-4">This data is being saved to <code class="bg-gray-200 p-1 rounded">'pagebookContentBackup'</code>.</p>
+            <pre id="json-output" class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm h-[70vh]"></pre>
+        </div>
+
+    </div>
+
+    <!-- Replace the inline script with the external script -->
+    <script src="flowing/JSONand_webWorker.js"></script>
+</body>
+</html>
