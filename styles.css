@@ -173,3 +173,8 @@ body {
     font-size: 0.875rem; /* text-sm */
     height: 70vh;
 }
+
+/* New style to hide children */
+.hide-children > * {
+    display: none !important;
+}
