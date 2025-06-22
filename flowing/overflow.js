@@ -28,7 +28,8 @@ self.onmessage = (event) => {
                 effectiveBottom = 24 + totalHeight; // 24px padding + total height
             }
             
-            if (effectiveBottom > THRESHOLD) {
+            // Add 2-pixel tolerance for overflow
+            if (effectiveBottom > THRESHOLD + 2) {
                 self.postMessage({
                     status: 'OVERFLOW',
                     elementIndex: pageElements.length - 1, // Use index instead of ID
