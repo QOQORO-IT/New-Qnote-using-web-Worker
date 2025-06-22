@@ -131,18 +131,17 @@ const initializePageFlow = () => {
         return newElement;
     };
 
-    // Calculate virtual bottomPosition sum for page 2 elements using mathematical approximation
+    // Calculate virtual bottomPosition sum for page 2 elements using page 2 measurements
     const calculateVirtualPage2Sum = () => {
         if (virtualPage2Elements.length === 0) return [];
         
-        // Get spacing measurements from existing page 1 elements
+        // Get measurements from both page 1 and the empty page 2 container
         const page1 = document.getElementById('pagenumber1');
+        const page2 = document.getElementById('pagenumber2');
         const page1Children = Array.from(page1.children);
         
         // Calculate average spacing between elements from page 1
         let averageSpacing = 0;
-        let totalMeasuredHeight = 0;
-        let elementCount = 0;
         
         if (page1Children.length > 1) {
             for (let i = 1; i < page1Children.length; i++) {
@@ -150,18 +149,20 @@ const initializePageFlow = () => {
                 const currRect = page1Children[i].getBoundingClientRect();
                 const spacing = currRect.top - prevRect.bottom;
                 averageSpacing += spacing;
-                totalMeasuredHeight += currRect.height;
-                elementCount++;
             }
             averageSpacing = averageSpacing / (page1Children.length - 1);
         } else {
-            // Fallback: use a reasonable default spacing
             averageSpacing = 4; // 4px default spacing
         }
         
-        // Calculate positions for virtual elements using mathematical approximation
+        // Use page 2's actual padding measurements
+        const page2Rect = page2.getBoundingClientRect();
+        const page2Styles = window.getComputedStyle(page2);
+        const page2PaddingTop = parseFloat(page2Styles.paddingTop) || 24;
+        
+        // Calculate positions for virtual elements using real page 2 measurements
         const results = [];
-        let currentPosition = 24; // Starting padding for page 2
+        let currentPosition = page2PaddingTop; // Use actual page 2 padding
         
         virtualPage2Elements.forEach((elementData, index) => {
             // Use stored height or calculate based on content type
@@ -174,7 +175,7 @@ const initializePageFlow = () => {
                 } else if (elementData.tagName === 'H2') {
                     estimatedHeight = 40; // Estimated height for headings
                 } else {
-                    // Estimate based on content length and average from page 1
+                    // Estimate based on content length
                     const contentLength = elementData.innerHTML.length;
                     estimatedHeight = Math.max(20, Math.min(60, 20 + (contentLength / 50) * 10));
                 }
@@ -281,8 +282,7 @@ const initializePageFlow = () => {
         const page2 = document.getElementById('pagenumber2');
         
         if (page2Hidden) {
-            // Show page 2
-            page2.classList.remove('page-hidden');
+            // Show page 2 children
             page2Hidden = false;
             togglePage2Btn.textContent = 'Hide Page 2';
             
@@ -293,8 +293,7 @@ const initializePageFlow = () => {
             });
             virtualPage2Elements = [];
         } else {
-            // Hide page 2
-            page2.classList.add('page-hidden');
+            // Hide page 2 children (but keep the container visible)
             page2Hidden = true;
             togglePage2Btn.textContent = 'Show Page 2';
             
@@ -303,7 +302,7 @@ const initializePageFlow = () => {
                 const elementData = createElementData(child, 2);
                 virtualPage2Elements.push(elementData);
             });
-            page2.innerHTML = '';
+            page2.innerHTML = ''; // Clear children but keep container
         }
         
         updateContentAndPositions();
