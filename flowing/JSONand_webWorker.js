@@ -30,6 +30,8 @@ const initializePageFlow = () => {
         }
         
         isProcessingQueue = false;
+        // Update content and positions after all operations in the batch are processed
+        updateContentAndPositions();
     };
 
     // Execute individual operation
@@ -73,8 +75,6 @@ const initializePageFlow = () => {
             }
         }
         
-        // Update content after each operation
-        updateContentAndPositions();
     };
 
     // Listen for messages from the Web Workers
@@ -308,10 +308,21 @@ const initializePageFlow = () => {
         updateContentAndPositions();
     };
 
+    // Debounce function
+    const debounce = (func, delay) => {
+        let timeout;
+        return function(...args) {
+            const context = this;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(context, args), delay);
+        };
+    };
+
+    const debouncedUpdateContentAndPositions = debounce(updateContentAndPositions, 100); // Debounce by 100ms
+
     // Event Listeners Setup
-    const mutationObserver = new MutationObserver(updateContentAndPositions);
     pagebooks.forEach(pagebook => {
-        mutationObserver.observe(pagebook, {
+        new MutationObserver(debouncedUpdateContentAndPositions).observe(pagebook, {
             childList: true, subtree: true, characterData: true, attributes: true
         });
     });
