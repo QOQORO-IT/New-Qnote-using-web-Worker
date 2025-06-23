@@ -173,3 +173,16 @@ body {
     font-size: 0.875rem; /* text-sm */
     height: 70vh;
 }
+
+/* New style to hide children */
+.hide-children > * {
+    display: none !important;
+}
+
+/* New style for glyph borders */
+.glyph-border {
+    border: 1px solid rgba(0, 0, 255, 0.3); /* Light blue border */
+    margin: 0 1px; /* Small margin to separate glyphs */
+    display: inline-block; /* Ensures border wraps content tightly */
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}

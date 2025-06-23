@@ -3,9 +3,10 @@ const initializePageFlow = () => {
     const pagebooks = document.querySelectorAll('.pagebook');
     const jsonOutput = document.getElementById('json-output');
     const restoreBtn = document.getElementById('restore-btn');
-    const togglePage2Btn = document.getElementById('toggle-page2-btn');
+    const showPage2Btn = document.getElementById('show-page2-btn');
+    const hidePage2Btn = document.getElementById('hide-page2-btn');
     const localStorageKey = 'pagebookContentBackup';
-    let page2Hidden = false;
+    let page2ChildrenHidden = false; // Renamed for clarity
     let virtualPage2Elements = []; // Store page 2 elements when hidden
 
     // Queue system to prevent overlapping operations
@@ -30,6 +31,8 @@ const initializePageFlow = () => {
         }
         
         isProcessingQueue = false;
+        // Update content and positions after all operations in the batch are processed
+        updateContentAndPositions();
     };
 
     // Execute individual operation
@@ -44,20 +47,20 @@ const initializePageFlow = () => {
             if (currentPage && currentPage.children.length > elementIndex) {
                 const elementToMove = currentPage.children[elementIndex];
                 
-                if (page2Hidden && nextPageNum === 2) {
-                    // Store in virtual page 2 elements at the beginning
-                    const elementData = createElementData(elementToMove, nextPageNum);
-                    virtualPage2Elements.unshift(elementData); // Insert at beginning
-                    elementToMove.remove();
-                } else if (nextPage) {
-                    // Insert as first child for word processor experience
-                    nextPage.insertBefore(elementToMove, nextPage.firstChild);
-                }
+        if (page2ChildrenHidden && nextPageNum === 2) {
+            // Store in virtual page 2 elements at the beginning
+            const elementData = createElementData(elementToMove, nextPageNum);
+            virtualPage2Elements.unshift(elementData); // Insert at beginning
+            elementToMove.remove();
+        } else if (nextPage) {
+            // Insert as first child for word processor experience
+            nextPage.insertBefore(elementToMove, nextPage.firstChild);
+        }
             }
         } else if (type === 'UNDERFLOW') {
             const targetPage = document.getElementById(`pagenumber${toPage}`);
             
-            if (page2Hidden && fromPage === 2 && virtualPage2Elements.length > elementIndex) {
+            if (page2ChildrenHidden && fromPage === 2 && virtualPage2Elements.length > elementIndex) {
                 // Move from virtual page 2 elements
                 const elementData = virtualPage2Elements.splice(elementIndex, 1)[0];
                 if (targetPage && elementData) {
@@ -73,8 +76,6 @@ const initializePageFlow = () => {
             }
         }
         
-        // Update content after each operation
-        updateContentAndPositions();
     };
 
     // Listen for messages from the Web Workers
@@ -129,6 +130,52 @@ const initializePageFlow = () => {
         }
         newElement.innerHTML = elementData.innerHTML;
         return newElement;
+    };
+
+    // Function to apply glyph borders to text nodes within an element
+    const applyGlyphBorders = (element) => {
+        // Create a TreeWalker to traverse all text nodes
+        const walker = document.createTreeWalker(
+            element,
+            NodeFilter.SHOW_TEXT,
+            null,
+            false
+        );
+
+        let node;
+        const textNodesToProcess = [];
+
+        // Collect text nodes to avoid modifying the DOM while traversing
+        while ((node = walker.nextNode())) {
+            // Skip if the text node is already inside a .glyph-border span
+            if (node.parentNode && node.parentNode.classList.contains('glyph-border')) {
+                continue;
+            }
+            // Skip if the text node is empty or just whitespace
+            if (node.nodeValue.trim() === '') {
+                continue;
+            }
+            textNodesToProcess.push(node);
+        }
+
+        textNodesToProcess.forEach(textNode => {
+            const textContent = textNode.nodeValue;
+            const words = textContent.split(/(\s+)/); // Split by whitespace, keeping whitespace
+
+            const fragment = document.createDocumentFragment();
+            words.forEach(word => {
+                if (word.trim() !== '') {
+                    const span = document.createElement('span');
+                    span.classList.add('glyph-border');
+                    span.textContent = word;
+                    fragment.appendChild(span);
+                } else {
+                    // Append whitespace directly
+                    fragment.appendChild(document.createTextNode(word));
+                }
+            });
+            textNode.parentNode.replaceChild(fragment, textNode);
+        });
     };
 
     // Calculate virtual bottomPosition sum for page 2 elements using page 2 measurements
@@ -207,8 +254,10 @@ const initializePageFlow = () => {
         const contentBackup = [];
         
         pagebooks.forEach(pagebook => {
-            if (page2Hidden && pagebook.id === 'pagenumber2') {
-                return; // Skip hidden page 2
+            // If page 2 children are hidden, we still want to process page 2 itself
+            // but its children are managed by virtualPage2Elements
+            if (pagebook.id === 'pagenumber2' && page2ChildrenHidden) {
+                return; // Skip processing actual children if they are hidden
             }
             
             const containerRect = pagebook.getBoundingClientRect();
@@ -234,8 +283,8 @@ const initializePageFlow = () => {
             });
         });
 
-        // Add virtual page 2 elements if page 2 is hidden
-        if (page2Hidden && virtualPage2Elements.length > 0) {
+        // Add virtual page 2 elements if page 2 children are hidden
+        if (page2ChildrenHidden && virtualPage2Elements.length > 0) {
             const virtualElements = calculateVirtualPage2Sum();
             contentBackup.push(...virtualElements);
         }
@@ -250,6 +299,17 @@ const initializePageFlow = () => {
         try {
             localStorage.setItem(localStorageKey, jsonString);
         } catch (e) { console.error("Failed to save to localStorage.", e); }
+
+        // Apply glyph borders after content is updated and positions are calculated
+        pagebooks.forEach(pagebook => {
+            if (pagebook.id === 'pagenumber2' && page2ChildrenHidden) {
+                // If page 2 children are hidden, apply borders to virtual elements if they were rendered
+                // This case is tricky as virtual elements are not in the DOM.
+                // For now, we'll only apply borders to visible elements.
+            } else {
+                applyGlyphBorders(pagebook);
+            }
+        });
     };
 
     const restoreContent = () => {
@@ -265,7 +325,7 @@ const initializePageFlow = () => {
                 const targetPageNum = parseInt(elementData.pagenum);
                 const targetPage = document.getElementById(`pagenumber${targetPageNum}`);
                 
-                if (page2Hidden && targetPageNum === 2) {
+                if (page2ChildrenHidden && targetPageNum === 2) {
                     // Store in virtual elements
                     virtualPage2Elements.push(elementData);
                 } else if (targetPage) {
@@ -274,17 +334,25 @@ const initializePageFlow = () => {
                 }
             });
             console.log("Content restored successfully.");
+            // Apply glyph borders after content is restored
+            pagebooks.forEach(pagebook => {
+                if (pagebook.id === 'pagenumber2' && page2ChildrenHidden) {
+                    // Same as above, only apply to visible elements
+                } else {
+                    applyGlyphBorders(pagebook);
+                }
+            });
         } catch (e) { console.error("Failed to restore content.", e); }
     };
 
-    // Toggle Page 2 visibility
-    const togglePage2 = () => {
+    // Show Page 2 children
+    const showPage2Children = () => {
         const page2 = document.getElementById('pagenumber2');
-        
-        if (page2Hidden) {
-            // Show page 2 children
-            page2Hidden = false;
-            togglePage2Btn.textContent = 'Hide Page 2';
+        if (!page2) return;
+
+        if (page2ChildrenHidden) {
+            page2ChildrenHidden = false;
+            page2.classList.remove('hide-children');
             
             // Restore virtual elements to actual page 2
             virtualPage2Elements.forEach(elementData => {
@@ -292,10 +360,18 @@ const initializePageFlow = () => {
                 page2.appendChild(newElement);
             });
             virtualPage2Elements = [];
-        } else {
-            // Hide page 2 children (but keep the container visible)
-            page2Hidden = true;
-            togglePage2Btn.textContent = 'Show Page 2';
+            updateContentAndPositions(); // This will trigger applyGlyphBorders
+        }
+    };
+
+    // Hide Page 2 children
+    const hidePage2Children = () => {
+        const page2 = document.getElementById('pagenumber2');
+        if (!page2) return;
+
+        if (!page2ChildrenHidden) {
+            page2ChildrenHidden = true;
+            page2.classList.add('hide-children');
             
             // Store page 2 elements virtually
             Array.from(page2.children).forEach(child => {
@@ -303,21 +379,32 @@ const initializePageFlow = () => {
                 virtualPage2Elements.push(elementData);
             });
             page2.innerHTML = ''; // Clear children but keep container
+            updateContentAndPositions(); // This will trigger applyGlyphBorders
         }
-        
-        updateContentAndPositions();
     };
 
+    // Debounce function
+    const debounce = (func, delay) => {
+        let timeout;
+        return function(...args) {
+            const context = this;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(context, args), delay);
+        };
+    };
+
+    const debouncedUpdateContentAndPositions = debounce(updateContentAndPositions, 100); // Debounce by 100ms
+
     // Event Listeners Setup
-    const mutationObserver = new MutationObserver(updateContentAndPositions);
     pagebooks.forEach(pagebook => {
-        mutationObserver.observe(pagebook, {
+        new MutationObserver(debouncedUpdateContentAndPositions).observe(pagebook, {
             childList: true, subtree: true, characterData: true, attributes: true
         });
     });
     
     restoreBtn.addEventListener('click', restoreContent);
-    togglePage2Btn.addEventListener('click', togglePage2);
+    showPage2Btn.addEventListener('click', showPage2Children);
+    hidePage2Btn.addEventListener('click', hidePage2Children);
     
     // Initial call on page load
     updateContentAndPositions();

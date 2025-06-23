@@ -36,7 +36,8 @@ self.onmessage = (event) => {
             
             const availableSpace = THRESHOLD - currentMaxBottom;
 
-            if (firstElementOnNextPage.height <= availableSpace) {
+            // Add 2-pixel tolerance for underflow
+            if (firstElementOnNextPage.height <= availableSpace - 2) {
                 self.postMessage({
                     status: 'UNDERFLOW',
                     elementIndex: 0, // Always the first element
